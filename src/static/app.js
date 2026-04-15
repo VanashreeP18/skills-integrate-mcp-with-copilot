@@ -3,6 +3,37 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const loginBtn = document.getElementById("login-btn");
+  const userInfo = document.getElementById("user-info");
+  const usernameSpan = document.getElementById("username");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  let isLoggedIn = false;
+
+  // Function to check auth status
+  async function checkAuth() {
+    try {
+      const response = await fetch("/auth/status");
+      const status = await response.json();
+      isLoggedIn = status.logged_in;
+      updateUI();
+    } catch (error) {
+      console.error("Error checking auth:", error);
+    }
+  }
+
+  // Function to update UI based on login status
+  function updateUI() {
+    if (isLoggedIn) {
+      loginBtn.style.display = "none";
+      userInfo.style.display = "inline";
+      signupForm.style.display = "block";
+    } else {
+      loginBtn.style.display = "inline";
+      userInfo.style.display = "none";
+      signupForm.style.display = "none";
+    }
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -21,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft =
           details.max_participants - details.participants.length;
 
-        // Create participants HTML with delete icons instead of bullet points
+        // Create participants HTML with delete icons only if logged in
         const participantsHTML =
           details.participants.length > 0
             ? `<div class="participants-section">
@@ -30,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${details.participants
                   .map(
                     (email) =>
-                      `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
+                      `<li><span class="participant-email">${email}</span>${isLoggedIn ? `<button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button>` : ''}</li>`
                   )
                   .join("")}
               </ul>
@@ -155,6 +186,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Login button handler
+  loginBtn.addEventListener("click", () => {
+    window.location.href = "/login";
+  });
+
+  // Logout button handler
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      await fetch("/logout", { method: "POST" });
+      isLoggedIn = false;
+      updateUI();
+      fetchActivities(); // Refresh to hide delete buttons
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  });
+
   // Initialize app
-  fetchActivities();
-});
+  checkAuth().then(() => {
+    fetchActivities();
+  });
